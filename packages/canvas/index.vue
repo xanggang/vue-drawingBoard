@@ -21,88 +21,103 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+  import { Vue, Component } from 'vue-property-decorator'
   import Main from './main'
-  import { addClass } from '../util/dom.js'
-  export default {
-    name: 'mycanvas',
-    data() {
-      return {
-        canvasWidth: 500,
-        canvasHeight: 500,
-        currentCanvas: null, // 当前编辑的图层, ctx对象
-        layerList: [], // 全部的ctx集合
-        canvasElementList: [], // 全部 的dom元素的集合
-        currentIndex: 0, // 当前编辑的索引
-      }
-    },
+  import { addClass } from '../util/dom'
+
+  @Component
+  export default class DrawingBoard extends Vue {
+    $refs!: {
+      canvasBar: HTMLBaseElement
+    }
+
+    painting: boolean = false // 鼠标是否按下
+    canvasWidth: number =  500
+    canvasHeight: number = 500
+    currentCanvas!: Main // 当前编辑的图层, ctx对象
+    layerList: Main[] =  [] // 全部的ctx集合
+    canvasElementList: HTMLCanvasElement[] = []// 全部 的dom元素的集合
+    currentIndex: number =  0// 当前编辑的索引
+    lastPoint: {x: number, y: number} = { x: 0, y: 0}
+
     mounted() {
       this.createCanvas()
-    },
-    methods: {
-      handleMousedown(e) {
-        this.currentCanvas.painting = true
-        let x = e.clientX;
-        let y = e.clientY;
-        this.currentCanvas.lastPoint = {x: x, y: y};
-        this.currentCanvas.drawCircle(x, y, 0);
-      },
-      handleMousemove(e) {
-        if (!this.currentCanvas.painting) return
-        let x = e.clientX;
-        let y = e.clientY;
-        let newPoint = {x: x, y: y};
-        this.currentCanvas.drawLine(this.currentCanvas.lastPoint.x, this.currentCanvas.lastPoint.y, newPoint.x, newPoint.y);
-        this.currentCanvas.lastPoint = newPoint;
-      },
-      handleMouseup(e) {
-        this.currentCanvas.painting = false
-      },
-      // 改变画笔大小
-      handleRangInput({target: {value}}) {
-        this.currentCanvas.lineWidth = +value
-        this.currentCanvas.radius = +value / 2
-      },
-      // 选择画笔颜色
-      handlePalette({target: {value}}) {
-        this.currentCanvas.fillColor = value
-        this.currentCanvas.strokeColor = value
-      },
-      // 清楚画布
-      clearCanvas() {
-        this.currentCanvas.clearCanvas()
-      },
-      // 创建新的画布
-      createCanvas() {
-        let canvasElement = document.createElement('canvas')
-        canvasElement.width = this.canvasWidth
-        canvasElement.height = this.canvasHeight
+    }
 
-        addClass(canvasElement, 'canvas')
+    handleMousedown(e: MouseEvent) {
+      this.painting = true
+      let x = e.clientX;
+      let y = e.clientY;
+      this.lastPoint = {x: x, y: y};
+      this.currentCanvas.drawCircle(x, y, 0);
+    }
 
-        this.$refs.canvasBar.appendChild(canvasElement)
+    handleMousemove(e: MouseEvent) {
+      if (!this.painting) return
+      let x = e.clientX;
+      let y = e.clientY;
+      let newPoint = {x: x, y: y};
+      this.currentCanvas.drawLine(this.lastPoint.x,
+        this.lastPoint.y, newPoint.x, newPoint.y);
+      this.lastPoint = newPoint;
+    }
 
-        this.canvasElementList.push(canvasElement)
+    handleMouseup() {
+      this.painting = false
+    }
 
-        const ctx = canvasElement.getContext("2d")
-        const currentCanvas = new Main(canvasElement, ctx)
-        this.currentCanvas = currentCanvas
-        this.layerList.push(currentCanvas)
-        this.currentIndex = this.canvasElementList.length - 1
-      },
-      deleteCanvas() {
-        this.layerList.splice(this.currentIndex, 1)
-        const dom = this.canvasElementList.splice(this.currentIndex, 1)
-        this.$refs.canvasBar.removeChild(dom[0])
-        this.currentIndex = this.canvasElementList.length - 1
-      },
-      selectCurrentCanvas(canvasElement, index) {
-        console.log(canvasElement, index);
-        this.currentCanvas = this.layerList[index]
-        this.currentIndex = index
-      },
+    // 改变画笔大小
+    handleRangInput(event: any) {
+      const value = event.target.value
+      this.currentCanvas.lineWidth = +value
+      this.currentCanvas.radius = +value / 2
+    }
+
+    // 选择画笔颜色
+    handlePalette(event: any) {
+      const value = event.target.value
+      this.currentCanvas.fillColor = value
+      this.currentCanvas.strokeColor = value
+    }
+
+    // 清楚画布
+    clearCanvas() {
+      this.currentCanvas.clearCanvas()
+    }
+
+    // 创建新的画布
+    createCanvas() {
+      let canvasElement = document.createElement('canvas') as HTMLCanvasElement
+      canvasElement.width = this.canvasWidth
+      canvasElement.height = this.canvasHeight
+
+      addClass(canvasElement, 'canvas')
+
+      this.$refs.canvasBar.appendChild(canvasElement)
+
+      this.canvasElementList.push(canvasElement)
+
+      const ctx = canvasElement.getContext("2d") as CanvasRenderingContext2D
+      const currentCanvas = new Main(canvasElement, ctx)
+      this.currentCanvas = currentCanvas
+      this.layerList.push(currentCanvas)
+      this.currentIndex = this.canvasElementList.length - 1
+    }
+
+    deleteCanvas() {
+      this.layerList.splice(this.currentIndex, 1)
+      const dom = this.canvasElementList.splice(this.currentIndex, 1)
+      this.$refs.canvasBar.removeChild(dom[0])
+      this.currentIndex = this.canvasElementList.length - 1
+    }
+
+    selectCurrentCanvas(canvasElement: HTMLCanvasElement, index:number) {
+      this.currentCanvas = this.layerList[index]
+      this.currentIndex = index
     }
   }
+
 </script>
 
 <style lang="less">
