@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="container">
     <!--<Layer></Layer>-->
     <div class="canvas-bar"
          ref="canvasBar"
@@ -9,20 +9,11 @@
       >
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
-      <div class="canvas-list">
-        <div v-for="(layer, index) in layerList"
-            :key="index"
-            @click.stop="selectCurrentCanvas(layer, index)"
-        >
-          <img :src="layer.previewUrl" width="50" height="50" alt="">
-        </div>
-      </div>
-
-
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
     <button @click="deleteCanvas">删除画布1</button>
+    <LayerManagement :layerList="layerList"></LayerManagement>
   </div>
 </template>
 
@@ -30,11 +21,12 @@
   import { Vue, Component, Provide } from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
+  import LayerManagement from './LayerManagement.vue'
 
   // @ts-ignore
   const LayerClass = Vue.extend(Layer) as Layer
 
-  @Component({ components: { Layer } })
+  @Component({ components: { Layer, LayerManagement } })
   export default class DrawingBoard extends Vue {
     $refs!: {
       canvasBar: HTMLBaseElement
@@ -171,19 +163,21 @@
       left: 10px;
       z-index: 1000;
     }
-    .canvas-list {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      z-index: 1001;
-      div {
+  }
+  .canvas-list {
+    position: absolute;
+    left: 520px;
+    top: 20px;
+    z-index: 1001;
+    height: 504px;
+    overflow: auto;
+    div {
+      width: 50px;
+      height: 50px;
+      border: 1px solid red;
+      img {
         width: 50px;
         height: 50px;
-        border: 1px solid red;
-        img {
-          width: 50px;
-          height: 50px;
-        }
       }
     }
   }

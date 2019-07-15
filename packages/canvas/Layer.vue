@@ -28,7 +28,7 @@
     @Inject()
     main!: MainClass;
 
-    @Prop(Number) zIndex: number;
+    @Prop(Number) zIndex!: number;
 
     get styleSetting() {
       return {
