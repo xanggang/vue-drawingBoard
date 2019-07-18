@@ -28,7 +28,9 @@
     @Inject()
     main!: MainClass;
 
-    @Prop(Number) zIndex!: number;
+    // @Prop(Number) zIndex!: number;
+
+    zIndex: number = 0
 
     get styleSetting() {
       return {
@@ -37,12 +39,13 @@
     }
 
     created() {
-      this.id = new Date().valueOf()
+      // this.id = new Date().valueOf()
     }
 
     mounted() {
       this.canvas = this.$el
       this.ctx = this.$el.getContext("2d")!
+      this.createdImg()
     }
 
     /**

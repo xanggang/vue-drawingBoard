@@ -1,66 +1,88 @@
 <template>
-  <div class="container" @mouseup="handleMouseup" ref="container">
-    <div class="img-bar"
-         v-for="(layer, index) in layerList"
-         :key="index"
-         @mousedown="handleMousedown"
-         @mousemove="handleMousemove"
-    >
-      <img class="preview-img"
-           width="50"
-           height="50"
-           :src="layer.previewUrl"
-           alt="">
-    </div>
+  <div class="container" ref="container">
+    <transition-group name="flip-list" tag="div">
+      <div class="img-bar"
+           v-for="(layer, index) in previewImgList"
+           :key="layer.id"
+           :data-id="layer.id"
+           :data-zindex="layer.zIndex"
+           draggable="true"
+           @dragstart.stop="ondragstart($event, index)"
+           @dragend.stop="ondragend"
+           @dragenter.stop="dragenter"
+           @mousedown.stop="mousedown"
+      >
+        <img
+            class="preview-img"
+            width="50"
+            height="50"
+            :src="layer.previewUrl">
+      </div>
+    </transition-group>
+
 
   </div>
 </template>
 
 <script lang="ts">
-  import {Component, Prop, Vue} from 'vue-property-decorator';
+  import {Component, Prop, Vue, Inject, Watch} from 'vue-property-decorator';
   import LayerClass from './Layer.vue'
+  import { removeClass, addClass, debounce } from '../util/dom'
+  import MainClass from './index.vue'
+
+  interface previewImg {
+    id: number,
+    previewUrl: string
+  }
 
   @Component({})
   export default class LayerManagementClass extends Vue {
+
     @Prop() layerList!: LayerClass[]
+
+    @Prop() previewImgList!: previewImg[]
+
+    @Inject()
+    main!: MainClass;
+
     $refs!:{
       container: HTMLElement
     }
 
-    painting: boolean = false
+    onDragenter!: EventListener
 
+    mounted() {
+      this.onDragenter = debounce(this.dragenter, 20)
+    }
+
+    // 当前拖动的元素
     currentImgElement!: HTMLElement | null
 
-    // 容器下边线
-    containerPositionBottom: number = 0;
-    // 容器上边线
-    containerPositionTop: number = 0;
-
-    currentImgElementPositionTop: number = 0;
-
-
-
-    handleMousedown(e: any) {
-      this.painting = true
-      this.currentImgElement = e.target
-      this.currentImgElementPositionTop = this.currentImgElement!.offsetTop
-      const container = this.$refs.container
-      this.containerPositionBottom = container.offsetTop + container.offsetHeight
-      this.containerPositionTop = container.offsetTop
+    mousedown($evente) {
+      addClass($evente.currentTarget, 'active')
     }
 
-    handleMousemove(e: MouseEvent) {
-      if (!this.painting) return
-      if (!this.currentImgElement!.style) return
-      this.currentImgElement!.style.transform = `translateY(${e.clientY - this.currentImgElementPositionTop}px)`
+    ondragstart($evente: any) {
+      addClass($evente.currentTarget, 'active')
+      this.currentImgElement = $evente.currentTarget
     }
 
-    handleMouseup() {
-      this.currentImgElement!.style.transform = `translateY(0px)`
+    dragenter(e: any) {
+      if (e.currentTarget === this.currentImgElement) return;
+      const currentId = this.currentImgElement!.dataset.id!;
+      const currentZindex = this.currentImgElement!.dataset.zindex!;
+
+      const resId = e.currentTarget.dataset.id!;
+      const resZindex= e.currentTarget.dataset.zindex!;
+
+      this.main.layerList.find(_ => _.id === +currentId)!.zIndex = +resZindex;
+      this.main.layerList.find(_ => _.id === + resId)!.zIndex = +currentZindex;
+    }
+
+    ondragend(e: any) {
+      console.log('ondragend');
+      removeClass(e.currentTarget, 'active')
       this.currentImgElement = null
-      this.containerPositionTop = 0
-      this.currentImgElementPositionTop = 0
-      this.painting = false
     }
   }
 </script>
@@ -83,5 +105,26 @@
       width: 100%;
       height: 100%;
     }
+  }
+</style>
+
+<style>
+  .active {
+    background-color: pink;
+  }
+  .list-item {
+    display: inline-block;
+    margin-right: 10px;
+  }
+  .list-enter-active, .list-leave-active {
+    transition: all 1s;
+  }
+  .list-enter, .list-leave-to
+    /* .list-leave-active for below version 2.1.8 */ {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  .flip-list-move {
+    transition: transform 0.1s;
   }
 </style>

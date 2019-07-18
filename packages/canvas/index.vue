@@ -13,7 +13,10 @@
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
     <button @click="deleteCanvas">删除画布1</button>
-    <LayerManagement :layerList="layerList"></LayerManagement>
+    <LayerManagement :layerList="layerList"
+                     :previewImgList="previewImgList"
+                     @changeSort="changeSort"
+    ></LayerManagement>
   </div>
 </template>
 
@@ -46,13 +49,26 @@
     canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
 
     currentIndex: number =  0 // 当前编辑的索引
-    zIndex =  1 // 自增z-index
+    zIndex =  0 // 自增z-index
 
     @Provide()
     painSetting: Paintbrush = this.paintbrush;
 
     @Provide()
     main = this;
+
+    // 所有的预览图片
+    get previewImgList() {
+      return this.layerList
+        .map(_ => {
+          return {
+            id: _.id,
+            previewUrl: _.previewUrl,
+            zIndex: _.zIndex
+          }
+        })
+        .sort((a, b) => b.zIndex - a.zIndex)
+    }
 
     mounted() {
       this.createCanvas()
@@ -111,14 +127,17 @@
       // @ts-ignore
       const layer = new LayerClass({
         parent: this,
-        propsData: { zIndex: this.zIndex++}
+        data: {
+          zIndex: this.zIndex++,
+          id: this.zIndex - 1
+        },
       })
       layer.$mount()
       this.$refs.canvasBar.appendChild(layer.$el) // 挂载
-      this.canvasElementList.push(layer.$el)
+      this.canvasElementList.unshift(layer.$el)
       this.layerList.push(layer)
       this.currentCanvasLayer = layer
-      this.currentIndex = this.layerList.length - 1
+      this.currentIndex = 0
     }
 
 
@@ -129,9 +148,11 @@
       this.currentIndex = this.canvasElementList.length - 1
     }
 
-    selectCurrentCanvas(layer: Layer, index:number) {
-      this.currentCanvasLayer = layer
-      this.currentIndex = index
+    // 改变图层排序1
+    changeSort(idList: number[]) {
+      this.layerList.forEach((layer, index) => {
+        layer.zIndex = idList[index]
+      })
     }
   }
 
