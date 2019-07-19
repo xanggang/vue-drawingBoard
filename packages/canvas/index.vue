@@ -1,5 +1,6 @@
 <template>
-  <div>
+  <div class="container">
+    <!--<Layer></Layer>-->
     <div class="canvas-bar"
          ref="canvasBar"
          @mousedown="handleMousedown"
@@ -8,38 +9,66 @@
       >
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
-      <div class="canvas-list">
-        <div v-for="(canvasElement, index) in canvasElementList"
-            :key="index"
-            @click.stop="selectCurrentCanvas(canvasElement, index)"
-        >{{index}}</div>
-      </div>
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
-    <button @click="deleteCanvas">删除画布</button>
+    <button @click="deleteCanvas">删除画布1</button>
+    <LayerManagement :layerList="layerList"
+                     :previewImgList="previewImgList"
+                     @changeSort="changeSort"
+    ></LayerManagement>
   </div>
 </template>
 
 <script lang="ts">
-  import { Vue, Component } from 'vue-property-decorator'
-  import Main from './main'
-  import { addClass } from '../util/dom'
+  import { Vue, Component, Provide } from 'vue-property-decorator'
+  import Layer from './Layer.vue'
+  import Paintbrush from './paintbrush'
+  import LayerManagement from './LayerManagement.vue'
 
-  @Component
+  // @ts-ignore
+  const LayerClass = Vue.extend(Layer) as Layer
+
+  @Component({ components: { Layer, LayerManagement } })
   export default class DrawingBoard extends Vue {
     $refs!: {
       canvasBar: HTMLBaseElement
-    }
+    };
 
-    painting: boolean = false // 鼠标是否按下
+    // 画笔、工具设置
+    paintbrush: Paintbrush = new Paintbrush()
+
+    painting: boolean = false; // 鼠标是否按下1
+    lastPoint!: {x: number, y: number}; // 最后编辑的鼠标位置
+
     canvasWidth: number =  500
     canvasHeight: number = 500
-    currentCanvas!: Main // 当前编辑的图层, ctx对象
-    layerList: Main[] =  [] // 全部的ctx集合
-    canvasElementList: HTMLCanvasElement[] = []// 全部 的dom元素的集合
-    currentIndex: number =  0// 当前编辑的索引
-    lastPoint: {x: number, y: number} = { x: 0, y: 0}
+
+    currentCanvasLayer!: Layer; // 当前编辑的图层, 一个vue组件
+    layerList: Layer[] =  []; // 全部的图层集合
+    canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
+
+    currentIndex: number =  0 // 当前编辑的索引
+    zIndex =  0 // 自增z-index
+
+    @Provide()
+    painSetting: Paintbrush = this.paintbrush;
+
+    @Provide()
+    main = this;
+
+    // 所有的预览图片
+    get previewImgList() {
+      return this.layerList
+        .map(_ => {
+          return {
+            id: _.id,
+            previewUrl: _.previewUrl,
+            zIndex: _.zIndex
+          }
+        })
+        .sort((a, b) => b.zIndex - a.zIndex)
+    }
 
     mounted() {
       this.createCanvas()
@@ -47,63 +76,70 @@
 
     handleMousedown(e: MouseEvent) {
       this.painting = true
-      let x = e.clientX;
-      let y = e.clientY;
+      let x = e.offsetX;
+      let y = e.offsetY;
       this.lastPoint = {x: x, y: y};
-      this.currentCanvas.drawCircle(x, y, 0);
+      this.currentCanvasLayer.drawCircle(x, y, 0);
     }
 
     handleMousemove(e: MouseEvent) {
       if (!this.painting) return
-      let x = e.clientX;
-      let y = e.clientY;
+      let x = e.offsetX;
+      let y = e.offsetY;
+      if (!this.lastPoint.x) {
+        this.lastPoint.x = x
+        this.lastPoint.y = y
+        return
+      }
       let newPoint = {x: x, y: y};
-      this.currentCanvas.drawLine(this.lastPoint.x,
+      this.currentCanvasLayer.drawLine(this.lastPoint.x,
         this.lastPoint.y, newPoint.x, newPoint.y);
       this.lastPoint = newPoint;
     }
 
     handleMouseup() {
       this.painting = false
+      this.currentCanvasLayer.createdImg()
     }
 
     // 改变画笔大小
     handleRangInput(event: any) {
       const value = event.target.value
-      this.currentCanvas.lineWidth = +value
-      this.currentCanvas.radius = +value / 2
+      this.paintbrush.lineWidth = +value
+      this.paintbrush.radius = +value / 2
     }
 
     // 选择画笔颜色
     handlePalette(event: any) {
       const value = event.target.value
-      this.currentCanvas.fillColor = value
-      this.currentCanvas.strokeColor = value
+      this.paintbrush.fillColor = value
+      this.paintbrush.strokeColor = value
     }
 
     // 清楚画布
     clearCanvas() {
-      this.currentCanvas.clearCanvas()
+      this.currentCanvasLayer.clearCanvas()
     }
 
     // 创建新的画布
     createCanvas() {
-      let canvasElement = document.createElement('canvas') as HTMLCanvasElement
-      canvasElement.width = this.canvasWidth
-      canvasElement.height = this.canvasHeight
-
-      addClass(canvasElement, 'canvas')
-
-      this.$refs.canvasBar.appendChild(canvasElement)
-
-      this.canvasElementList.push(canvasElement)
-
-      const ctx = canvasElement.getContext("2d") as CanvasRenderingContext2D
-      const currentCanvas = new Main(canvasElement, ctx)
-      this.currentCanvas = currentCanvas
-      this.layerList.push(currentCanvas)
-      this.currentIndex = this.canvasElementList.length - 1
+      // 创建一个新的vue画布实例1
+      // @ts-ignore
+      const layer = new LayerClass({
+        parent: this,
+        data: {
+          zIndex: this.zIndex++,
+          id: this.zIndex - 1
+        },
+      })
+      layer.$mount()
+      this.$refs.canvasBar.appendChild(layer.$el) // 挂载
+      this.canvasElementList.unshift(layer.$el)
+      this.layerList.push(layer)
+      this.currentCanvasLayer = layer
+      this.currentIndex = 0
     }
+
 
     deleteCanvas() {
       this.layerList.splice(this.currentIndex, 1)
@@ -112,9 +148,11 @@
       this.currentIndex = this.canvasElementList.length - 1
     }
 
-    selectCurrentCanvas(canvasElement: HTMLCanvasElement, index:number) {
-      this.currentCanvas = this.layerList[index]
-      this.currentIndex = index
+    // 改变图层排序1
+    changeSort(idList: number[]) {
+      this.layerList.forEach((layer, index) => {
+        layer.zIndex = idList[index]
+      })
     }
   }
 
@@ -146,15 +184,21 @@
       left: 10px;
       z-index: 1000;
     }
-    .canvas-list {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      z-index: 1001;
-      li {
-        width: 40px;
-        height: 40px;
-        background-color: pink;
+  }
+  .canvas-list {
+    position: absolute;
+    left: 520px;
+    top: 20px;
+    z-index: 1001;
+    height: 504px;
+    overflow: auto;
+    div {
+      width: 50px;
+      height: 50px;
+      border: 1px solid red;
+      img {
+        width: 50px;
+        height: 50px;
       }
     }
   }
