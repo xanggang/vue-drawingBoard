@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="container">
     <!--<Layer></Layer>-->
     <div class="canvas-bar"
          ref="canvasBar"
@@ -9,20 +9,14 @@
       >
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
-      <div class="canvas-list">
-        <div v-for="(layer, index) in layerList"
-            :key="index"
-            @click.stop="selectCurrentCanvas(layer, index)"
-        >
-          <img :src="layer.previewUrl" width="50" height="50" alt="">
-        </div>
-      </div>
-
-
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
     <button @click="deleteCanvas">删除画布1</button>
+    <LayerManagement :layerList="layerList"
+                     :previewImgList="previewImgList"
+                     @changeSort="changeSort"
+    ></LayerManagement>
   </div>
 </template>
 
@@ -30,11 +24,12 @@
   import { Vue, Component, Provide } from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
+  import LayerManagement from './LayerManagement.vue'
 
   // @ts-ignore
   const LayerClass = Vue.extend(Layer) as Layer
 
-  @Component({ components: { Layer } })
+  @Component({ components: { Layer, LayerManagement } })
   export default class DrawingBoard extends Vue {
     $refs!: {
       canvasBar: HTMLBaseElement
@@ -54,13 +49,26 @@
     canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
 
     currentIndex: number =  0 // 当前编辑的索引
-    zIndex =  1 // 自增z-index
+    zIndex =  0 // 自增z-index
 
     @Provide()
     painSetting: Paintbrush = this.paintbrush;
 
     @Provide()
     main = this;
+
+    // 所有的预览图片
+    get previewImgList() {
+      return this.layerList
+        .map(_ => {
+          return {
+            id: _.id,
+            previewUrl: _.previewUrl,
+            zIndex: _.zIndex
+          }
+        })
+        .sort((a, b) => b.zIndex - a.zIndex)
+    }
 
     mounted() {
       this.createCanvas()
@@ -119,14 +127,17 @@
       // @ts-ignore
       const layer = new LayerClass({
         parent: this,
-        propsData: { zIndex: this.zIndex++}
+        data: {
+          zIndex: this.zIndex++,
+          id: this.zIndex - 1
+        },
       })
       layer.$mount()
       this.$refs.canvasBar.appendChild(layer.$el) // 挂载
-      this.canvasElementList.push(layer.$el)
+      this.canvasElementList.unshift(layer.$el)
       this.layerList.push(layer)
       this.currentCanvasLayer = layer
-      this.currentIndex = this.layerList.length - 1
+      this.currentIndex = 0
     }
 
 
@@ -137,9 +148,11 @@
       this.currentIndex = this.canvasElementList.length - 1
     }
 
-    selectCurrentCanvas(layer: Layer, index:number) {
-      this.currentCanvasLayer = layer
-      this.currentIndex = index
+    // 改变图层排序1
+    changeSort(idList: number[]) {
+      this.layerList.forEach((layer, index) => {
+        layer.zIndex = idList[index]
+      })
     }
   }
 
@@ -171,19 +184,21 @@
       left: 10px;
       z-index: 1000;
     }
-    .canvas-list {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      z-index: 1001;
-      div {
+  }
+  .canvas-list {
+    position: absolute;
+    left: 520px;
+    top: 20px;
+    z-index: 1001;
+    height: 504px;
+    overflow: auto;
+    div {
+      width: 50px;
+      height: 50px;
+      border: 1px solid red;
+      img {
         width: 50px;
         height: 50px;
-        border: 1px solid red;
-        img {
-          width: 50px;
-          height: 50px;
-        }
       }
     }
   }
