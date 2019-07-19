@@ -12,7 +12,6 @@
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
-    <button @click="deleteCanvas">删除画布1</button>
     <LayerManagement :layerList="layerList"
                      :previewImgList="previewImgList"
                      @changeSort="changeSort"
@@ -21,7 +20,7 @@
 </template>
 
 <script lang="ts">
-  import { Vue, Component, Provide } from 'vue-property-decorator'
+  import { Vue, Component, Provide, ProvideReactive } from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
   import LayerManagement from './LayerManagement.vue'
@@ -48,7 +47,6 @@
     layerList: Layer[] =  []; // 全部的图层集合
     canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
 
-    currentIndex: number =  0 // 当前编辑的索引
     zIndex =  0 // 自增z-index
 
     @Provide()
@@ -137,16 +135,8 @@
       this.canvasElementList.unshift(layer.$el)
       this.layerList.push(layer)
       this.currentCanvasLayer = layer
-      this.currentIndex = 0
     }
 
-
-    deleteCanvas() {
-      this.layerList.splice(this.currentIndex, 1)
-      const dom = this.canvasElementList.splice(this.currentIndex, 1)
-      this.$refs.canvasBar.removeChild(dom[0])
-      this.currentIndex = this.canvasElementList.length - 1
-    }
 
     // 改变图层排序1
     changeSort(idList: number[]) {

@@ -10,7 +10,8 @@
            @dragstart.stop="ondragstart($event, index)"
            @dragend.stop="ondragend"
            @dragenter.stop="dragenter"
-           @mousedown.stop="mousedown"
+           @contextmenu="oncontextmenu"
+           @click="selectCurrentLayer(layer.id)"
       >
         <img
             class="preview-img"
@@ -19,24 +20,29 @@
             :src="layer.previewUrl">
       </div>
     </transition-group>
-
-
   </div>
 </template>
 
 <script lang="ts">
-  import {Component, Prop, Vue, Inject, Watch} from 'vue-property-decorator';
+  import {Component, Prop, Vue, Inject, InjectReactive} from 'vue-property-decorator';
   import LayerClass from './Layer.vue'
-  import { removeClass, addClass, debounce } from '../util/dom'
+  import { removeClass, addClass, once, on } from '../util/dom'
   import MainClass from './index.vue'
+  import RightClickMenu from './RightClickMenu.vue'
+  const Popper = require('../util/popper.js')
+
+  // @ts-ignore
+  const PopperClass = Vue.extend(RightClickMenu) as RightClickMenu
 
   interface previewImg {
     id: number,
     previewUrl: string
   }
 
-  @Component({})
+  @Component({components: { RightClickMenu }})
   export default class LayerManagementClass extends Vue {
+
+    $parent!: MainClass
 
     @Prop() layerList!: LayerClass[]
 
@@ -52,9 +58,16 @@
     // 当前拖动的元素
     currentImgElement!: HTMLElement | null
 
-    mousedown($evente) {
-      addClass($evente.currentTarget, 'active')
+    popperJS: any = null
+    rightClickMenu!: RightClickMenu
+
+    // 选择当前图层
+    selectCurrentLayer(n: number) {
+      // todo 为什么这里不是响应的， 而dragenter是可以响应的呢
+      // this.main.currentCanvasLayer = this.main.layerList.find(_ => _.id === n)!
+      this.$parent.currentCanvasLayer = this.$parent.layerList.find(_ => _.id === n)!
     }
+
 
     ondragstart($evente: any) {
       addClass($evente.currentTarget, 'active')
@@ -76,6 +89,33 @@
     ondragend(e: any) {
       removeClass(e.currentTarget, 'active')
       this.currentImgElement = null
+    }
+
+    // 右键唤出菜单
+    oncontextmenu(e:MouseEvent) {
+      e.preventDefault();
+      // @ts-ignore
+      const rightClickMenu = this.rightClickMenu = new PopperClass()
+      rightClickMenu.$mount()
+      document.body.appendChild(rightClickMenu.$el)
+      // 使用popperjs定位右键菜单
+      this.popperJS = new Popper(
+        e.target,
+        rightClickMenu.$el,
+        {
+          placement: 'bottom-start'
+        }
+      )
+      once(document.body, 'click', this.handleCancelRightMenu)
+    }
+
+    // 隐藏右键菜单
+    handleCancelRightMenu(e: MouseEvent): void {
+      if (!this.rightClickMenu.$el.contains(e.target as Node)) {
+        this.rightClickMenu.$destroy()
+        this.popperJS = null
+        document.body.removeChild(this.rightClickMenu.$el)
+      }
     }
   }
 </script>

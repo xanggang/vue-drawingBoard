@@ -142,22 +142,6 @@ export function setStyle(element: HTMLBaseElement, styleName: string, value: str
 };
 
 
-export function index(el: Element | null, selector ?: any) {
-  let index = 0;
-
-  if (!el || !el.parentNode) {
-    return -1;
-  }
-
-  /* jshint boss:true */
-  while (el = el.previousElementSibling) {
-    index++;
-  }
-
-  return index;
-}
-
-
 export function debounce(func: Function, wait: number) {
   let timeout: any = undefined
   return function () {
