@@ -49,12 +49,6 @@
       container: HTMLElement
     }
 
-    onDragenter!: EventListener
-
-    mounted() {
-      this.onDragenter = debounce(this.dragenter, 20)
-    }
-
     // 当前拖动的元素
     currentImgElement!: HTMLElement | null
 
@@ -80,7 +74,6 @@
     }
 
     ondragend(e: any) {
-      console.log('ondragend');
       removeClass(e.currentTarget, 'active')
       this.currentImgElement = null
     }
