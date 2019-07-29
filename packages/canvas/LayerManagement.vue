@@ -10,7 +10,7 @@
            @dragstart.stop="ondragstart($event, index)"
            @dragend.stop="ondragend"
            @dragenter.stop="dragenter"
-           @contextmenu="oncontextmenu"
+           @contextmenu="oncontextmenu($event, layer)"
            @click="selectCurrentLayer(layer.id)"
       >
         <img
@@ -26,7 +26,7 @@
 <script lang="ts">
   import {Component, Prop, Vue, Inject, InjectReactive} from 'vue-property-decorator';
   import LayerClass from './Layer.vue'
-  import { removeClass, addClass, once, on } from '../util/dom'
+  import { removeClass, addClass, once, on, off } from '../util/dom'
   import MainClass from './index.vue'
   import RightClickMenu from './RightClickMenu.vue'
   const Popper = require('../util/popper.js')
@@ -56,16 +56,15 @@
     }
 
     // 当前拖动的元素
-    currentImgElement!: HTMLElement | null
+    currentImgElement: HTMLElement | null = null
+    currentImgRightElement: HTMLElement | null = null
 
     popperJS: any = null
-    rightClickMenu!: RightClickMenu
+    rightClickMenu: RightClickMenu | null = null
 
     // 选择当前图层
-    selectCurrentLayer(n: number) {
-      // todo 为什么这里不是响应的， 而dragenter是可以响应的呢
-      // this.main.currentCanvasLayer = this.main.layerList.find(_ => _.id === n)!
-      this.$parent.currentCanvasLayer = this.$parent.layerList.find(_ => _.id === n)!
+    selectCurrentLayer(id: number) {
+      this.main.selectCurrentLayer(id)
     }
 
 
@@ -75,6 +74,7 @@
     }
 
     dragenter(e: any) {
+      // TODO 迁移到main实例处理
       if (e.currentTarget === this.currentImgElement) return;
       const currentId = this.currentImgElement!.dataset.id!;
       const currentZindex = this.currentImgElement!.dataset.zindex!;
@@ -92,30 +92,79 @@
     }
 
     // 右键唤出菜单
-    oncontextmenu(e:MouseEvent) {
+    oncontextmenu(e:any, layer: LayerClass) {
       e.preventDefault();
+      // 如果点击的是同一个图层
+      if (e.currentTarget === this.currentImgRightElement) {
+        return
+      }
+      // 如果其他图层的右键菜单展示中
+      if (this.currentImgRightElement) {
+        // 隐藏菜单
+        this.removeRightMenu()
+      }
+      this.currentImgRightElement = e.currentTarget
       // @ts-ignore
-      const rightClickMenu = this.rightClickMenu = new PopperClass()
+      const rightClickMenu = this.rightClickMenu = new PopperClass({
+        data: {
+          id: layer.id,
+          zIndex: layer.zIndex
+        },
+        parent: this,
+      })
+
       rightClickMenu.$mount()
+      rightClickMenu.$once('hideRightMenu', this.removeRightMenu)
+
+
       document.body.appendChild(rightClickMenu.$el)
       // 使用popperjs定位右键菜单
       this.popperJS = new Popper(
         e.target,
         rightClickMenu.$el,
         {
-          placement: 'bottom-start'
+          placement: 'bottom-start',
+          offsets:{
+            top: 10,
+            left:10
+          }
         }
       )
-      once(document.body, 'click', this.handleCancelRightMenu)
+      setTimeout(() => {
+        on(document.body, 'click', this.handleMenuEvent)
+        on(document.body, 'contextmenu', this.handleMenuEvent)
+      })
+
     }
 
     // 隐藏右键菜单
-    handleCancelRightMenu(e: MouseEvent): void {
-      if (!this.rightClickMenu.$el.contains(e.target as Node)) {
-        this.rightClickMenu.$destroy()
-        this.popperJS = null
-        document.body.removeChild(this.rightClickMenu.$el)
+    handleMenuEvent(e: any): void {
+      if (!this.rightClickMenu) {
+        return
       }
+
+      // 如果点击的是同一个菜单， 怎什么也不做
+      if (this.currentImgRightElement === e.currentTarget) {
+        return
+      }
+
+      // 如果点击的位置在右键菜单内部
+      if (!this.rightClickMenu.$el.contains(e.target as Node)) {
+        this.removeRightMenu()
+      }
+    }
+
+    // 移除右键菜单
+    removeRightMenu() {
+      if (!this.rightClickMenu) {
+        return
+      }
+      this.rightClickMenu.$destroy()
+      this.popperJS = null
+      this.currentImgRightElement = null
+      document.body!.removeChild(this.rightClickMenu.$el)
+      off(document.body, 'click', this.handleMenuEvent)
+      off(document.body, 'contextmenu', this.handleMenuEvent)
     }
   }
 </script>

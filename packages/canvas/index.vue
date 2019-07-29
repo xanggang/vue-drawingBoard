@@ -6,7 +6,7 @@
          @mousedown="handleMousedown"
          @mousemove="handleMousemove"
          @mouseup="handleMouseup"
-      >
+    >
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
     </div>
@@ -14,13 +14,12 @@
     <button @click="createCanvas">添加画布</button>
     <LayerManagement :layerList="layerList"
                      :previewImgList="previewImgList"
-                     @changeSort="changeSort"
     ></LayerManagement>
   </div>
 </template>
 
 <script lang="ts">
-  import { Vue, Component, Provide, ProvideReactive } from 'vue-property-decorator'
+  import {Vue, Component, Provide, ProvideReactive} from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
   import LayerManagement from './LayerManagement.vue'
@@ -28,7 +27,7 @@
   // @ts-ignore
   const LayerClass = Vue.extend(Layer) as Layer
 
-  @Component({ components: { Layer, LayerManagement } })
+  @Component({components: {Layer, LayerManagement}})
   export default class DrawingBoard extends Vue {
     $refs!: {
       canvasBar: HTMLBaseElement
@@ -38,16 +37,16 @@
     paintbrush: Paintbrush = new Paintbrush()
 
     painting: boolean = false; // 鼠标是否按下1
-    lastPoint!: {x: number, y: number}; // 最后编辑的鼠标位置
+    lastPoint!: { x: number, y: number }; // 最后编辑的鼠标位置
 
-    canvasWidth: number =  500
+    canvasWidth: number = 500
     canvasHeight: number = 500
 
     currentCanvasLayer!: Layer; // 当前编辑的图层, 一个vue组件
-    layerList: Layer[] =  []; // 全部的图层集合
+    layerList: Layer[] = []; // 全部的图层集合
     canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
 
-    zIndex =  0 // 自增z-index
+    zIndex = 0 // 自增z-index
 
     @Provide()
     painSetting: Paintbrush = this.paintbrush;
@@ -103,15 +102,16 @@
     // 改变画笔大小
     handleRangInput(event: any) {
       const value = event.target.value
-      this.paintbrush.lineWidth = +value
-      this.paintbrush.radius = +value / 2
+      this.paintbrush.changePaintbrushWidth(+value)
+      this.paintbrush.changePaintbrushRadius(+value / 2)
     }
 
     // 选择画笔颜色
     handlePalette(event: any) {
       const value = event.target.value
-      this.paintbrush.fillColor = value
-      this.paintbrush.strokeColor = value
+
+      this.paintbrush.changePaintbrushFillColor(value)
+      this.paintbrush.changePaintbrushStrokeColor(value)
     }
 
     // 清楚画布
@@ -131,17 +131,56 @@
         },
       })
       layer.$mount()
+      layer.$el.dataset.id = '' + layer.id
       this.$refs.canvasBar.appendChild(layer.$el) // 挂载
       this.canvasElementList.unshift(layer.$el)
       this.layerList.push(layer)
       this.currentCanvasLayer = layer
     }
 
+    // 选中图层
+    selectCurrentLayer(id: number) {
+      this.currentCanvasLayer = this.layerList.find(_ => _.id === id)!
+    }
 
-    // 改变图层排序1
-    changeSort(idList: number[]) {
-      this.layerList.forEach((layer, index) => {
-        layer.zIndex = idList[index]
+    // 删除画布
+    deleteLayer(id: number) {
+      const layerIndex = this.layerList.findIndex(layer => layer.id === id)
+      this.layerList.splice(layerIndex, 1)
+      const elementIndex = this.canvasElementList.findIndex(el => +el.dataset.id! === id)
+      const element = this.canvasElementList.splice(elementIndex, 1)
+      this.$refs.canvasBar.removeChild(element[0])
+    }
+
+    // 图层置底
+    sendLayerToBack(id: number) {
+      this.layerList.forEach(item => {
+        if (item.id === id) {
+          item.zIndex = 0
+          return
+        }
+        if (this.zIndex > item.zIndex) {
+          item.zIndex++
+        }
+        if (this.zIndex < item.zIndex) {
+          return
+        }
+      })
+    }
+
+    // 图层置顶
+    bringLayerToFront(id: number) {
+      this.main.layerList.forEach(item => {
+        if (item.id === id) {
+          item.zIndex = this.main.layerList.length
+          return
+        }
+        if (this.zIndex > item.zIndex) {
+          return
+        }
+        if (this.zIndex < item.zIndex) {
+          item.zIndex--
+        }
       })
     }
   }
@@ -175,6 +214,7 @@
       z-index: 1000;
     }
   }
+
   .canvas-list {
     position: absolute;
     left: 520px;

@@ -15,7 +15,7 @@ const camelCase = function(name: string): string {
 
 /* istanbul ignore next */
 export const on = (function() {
-  return function(element: Element, event: string, handler: EventListenerObject) {
+  return function(element: Element, event: string, handler: any) {
     if (element && event && handler) {
       element.addEventListener(event, handler, false);
     }
@@ -24,7 +24,7 @@ export const on = (function() {
 
 /* istanbul ignore next */
 export const off = (function() {
-  return function(element: Element, event: string, handler: EventListenerObject) {
+  return function(element: Element, event: string, handler: any) {
     if (element && event) {
       element.removeEventListener(event, handler, false);
     }
