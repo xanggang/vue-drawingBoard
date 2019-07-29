@@ -19,7 +19,7 @@
     ctx!: CanvasRenderingContext2D; //默认为绘图环境
     canvas !: HTMLCanvasElement; //默认画布
 
-    id: number = 0; // id
+    readonly id: number = 0; // id
     previewUrl: string = ''
 
     @Inject()
