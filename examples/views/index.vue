@@ -1,6 +1,6 @@
 <template>
   <div>
-    <mycanvas></mycanvas>
+    <DrawingBoard></DrawingBoard>
   </div>
 </template>
 

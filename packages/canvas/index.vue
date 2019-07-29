@@ -1,108 +1,190 @@
 <template>
-  <div>
+  <div class="container">
+    <!--<Layer></Layer>-->
     <div class="canvas-bar"
          ref="canvasBar"
          @mousedown="handleMousedown"
          @mousemove="handleMousemove"
          @mouseup="handleMouseup"
-      >
+    >
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
-      <div class="canvas-list">
-        <div v-for="(canvasElement, index) in canvasElementList"
-            :key="index"
-            @click.stop="selectCurrentCanvas(canvasElement, index)"
-        >{{index}}</div>
-      </div>
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
-    <button @click="deleteCanvas">删除画布</button>
+    <LayerManagement :layerList="layerList"
+                     :previewImgList="previewImgList"
+    ></LayerManagement>
   </div>
 </template>
 
-<script>
-  import Main from './main'
-  import { addClass } from '../util/dom.js'
-  export default {
-    name: 'mycanvas',
-    data() {
-      return {
-        canvasWidth: 500,
-        canvasHeight: 500,
-        currentCanvas: null, // 当前编辑的图层, ctx对象
-        layerList: [], // 全部的ctx集合
-        canvasElementList: [], // 全部 的dom元素的集合
-        currentIndex: 0, // 当前编辑的索引
-      }
-    },
+<script lang="ts">
+  import {Vue, Component, Provide, ProvideReactive} from 'vue-property-decorator'
+  import Layer from './Layer.vue'
+  import Paintbrush from './paintbrush'
+  import LayerManagement from './LayerManagement.vue'
+
+  // @ts-ignore
+  const LayerClass = Vue.extend(Layer) as Layer
+
+  @Component({components: {Layer, LayerManagement}})
+  export default class DrawingBoard extends Vue {
+    $refs!: {
+      canvasBar: HTMLBaseElement
+    };
+
+    // 画笔、工具设置
+    paintbrush: Paintbrush = new Paintbrush()
+
+    painting: boolean = false; // 鼠标是否按下1
+    lastPoint!: { x: number, y: number }; // 最后编辑的鼠标位置
+
+    canvasWidth: number = 500
+    canvasHeight: number = 500
+
+    currentCanvasLayer!: Layer; // 当前编辑的图层, 一个vue组件
+    layerList: Layer[] = []; // 全部的图层集合
+    canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
+
+    zIndex = 0 // 自增z-index
+
+    @Provide()
+    painSetting: Paintbrush = this.paintbrush;
+
+    @Provide()
+    main = this;
+
+    // 所有的预览图片
+    get previewImgList() {
+      return this.layerList
+        .map(_ => {
+          return {
+            id: _.id,
+            previewUrl: _.previewUrl,
+            zIndex: _.zIndex
+          }
+        })
+        .sort((a, b) => b.zIndex - a.zIndex)
+    }
+
     mounted() {
       this.createCanvas()
-    },
-    methods: {
-      handleMousedown(e) {
-        this.currentCanvas.painting = true
-        let x = e.clientX;
-        let y = e.clientY;
-        this.currentCanvas.lastPoint = {x: x, y: y};
-        this.currentCanvas.drawCircle(x, y, 0);
-      },
-      handleMousemove(e) {
-        if (!this.currentCanvas.painting) return
-        let x = e.clientX;
-        let y = e.clientY;
-        let newPoint = {x: x, y: y};
-        this.currentCanvas.drawLine(this.currentCanvas.lastPoint.x, this.currentCanvas.lastPoint.y, newPoint.x, newPoint.y);
-        this.currentCanvas.lastPoint = newPoint;
-      },
-      handleMouseup(e) {
-        this.currentCanvas.painting = false
-      },
-      // 改变画笔大小
-      handleRangInput({target: {value}}) {
-        this.currentCanvas.lineWidth = +value
-        this.currentCanvas.radius = +value / 2
-      },
-      // 选择画笔颜色
-      handlePalette({target: {value}}) {
-        this.currentCanvas.fillColor = value
-        this.currentCanvas.strokeColor = value
-      },
-      // 清楚画布
-      clearCanvas() {
-        this.currentCanvas.clearCanvas()
-      },
-      // 创建新的画布
-      createCanvas() {
-        let canvasElement = document.createElement('canvas')
-        canvasElement.width = this.canvasWidth
-        canvasElement.height = this.canvasHeight
+    }
 
-        addClass(canvasElement, 'canvas')
+    handleMousedown(e: MouseEvent) {
+      this.painting = true
+      let x = e.offsetX;
+      let y = e.offsetY;
+      this.lastPoint = {x: x, y: y};
+      this.currentCanvasLayer.drawCircle(x, y, 0);
+    }
 
-        this.$refs.canvasBar.appendChild(canvasElement)
+    handleMousemove(e: MouseEvent) {
+      if (!this.painting) return
+      let x = e.offsetX;
+      let y = e.offsetY;
+      if (!this.lastPoint.x) {
+        this.lastPoint.x = x
+        this.lastPoint.y = y
+        return
+      }
+      let newPoint = {x: x, y: y};
+      this.currentCanvasLayer.drawLine(this.lastPoint.x,
+        this.lastPoint.y, newPoint.x, newPoint.y);
+      this.lastPoint = newPoint;
+    }
 
-        this.canvasElementList.push(canvasElement)
+    handleMouseup() {
+      this.painting = false
+      this.currentCanvasLayer.createdImg()
+    }
 
-        const ctx = canvasElement.getContext("2d")
-        const currentCanvas = new Main(canvasElement, ctx)
-        this.currentCanvas = currentCanvas
-        this.layerList.push(currentCanvas)
-        this.currentIndex = this.canvasElementList.length - 1
-      },
-      deleteCanvas() {
-        this.layerList.splice(this.currentIndex, 1)
-        const dom = this.canvasElementList.splice(this.currentIndex, 1)
-        this.$refs.canvasBar.removeChild(dom[0])
-        this.currentIndex = this.canvasElementList.length - 1
-      },
-      selectCurrentCanvas(canvasElement, index) {
-        console.log(canvasElement, index);
-        this.currentCanvas = this.layerList[index]
-        this.currentIndex = index
-      },
+    // 改变画笔大小
+    handleRangInput(event: any) {
+      const value = event.target.value
+      this.paintbrush.changePaintbrushWidth(+value)
+      this.paintbrush.changePaintbrushRadius(+value / 2)
+    }
+
+    // 选择画笔颜色
+    handlePalette(event: any) {
+      const value = event.target.value
+
+      this.paintbrush.changePaintbrushFillColor(value)
+      this.paintbrush.changePaintbrushStrokeColor(value)
+    }
+
+    // 清楚画布
+    clearCanvas() {
+      this.currentCanvasLayer.clearCanvas()
+    }
+
+    // 创建新的画布
+    createCanvas() {
+      // 创建一个新的vue画布实例1
+      // @ts-ignore
+      const layer = new LayerClass({
+        parent: this,
+        data: {
+          zIndex: this.zIndex++,
+          id: this.zIndex - 1
+        },
+      })
+      layer.$mount()
+      layer.$el.dataset.id = '' + layer.id
+      this.$refs.canvasBar.appendChild(layer.$el) // 挂载
+      this.canvasElementList.unshift(layer.$el)
+      this.layerList.push(layer)
+      this.currentCanvasLayer = layer
+    }
+
+    // 选中图层
+    selectCurrentLayer(id: number) {
+      this.currentCanvasLayer = this.layerList.find(_ => _.id === id)!
+    }
+
+    // 删除画布
+    deleteLayer(id: number) {
+      const layerIndex = this.layerList.findIndex(layer => layer.id === id)
+      this.layerList.splice(layerIndex, 1)
+      const elementIndex = this.canvasElementList.findIndex(el => +el.dataset.id! === id)
+      const element = this.canvasElementList.splice(elementIndex, 1)
+      this.$refs.canvasBar.removeChild(element[0])
+    }
+
+    // 图层置底
+    sendLayerToBack(id: number) {
+      this.layerList.forEach(item => {
+        if (item.id === id) {
+          item.zIndex = 0
+          return
+        }
+        if (this.zIndex > item.zIndex) {
+          item.zIndex++
+        }
+        if (this.zIndex < item.zIndex) {
+          return
+        }
+      })
+    }
+
+    // 图层置顶
+    bringLayerToFront(id: number) {
+      this.main.layerList.forEach(item => {
+        if (item.id === id) {
+          item.zIndex = this.main.layerList.length
+          return
+        }
+        if (this.zIndex > item.zIndex) {
+          return
+        }
+        if (this.zIndex < item.zIndex) {
+          item.zIndex--
+        }
+      })
     }
   }
+
 </script>
 
 <style lang="less">
@@ -131,15 +213,22 @@
       left: 10px;
       z-index: 1000;
     }
-    .canvas-list {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      z-index: 1001;
-      li {
-        width: 40px;
-        height: 40px;
-        background-color: pink;
+  }
+
+  .canvas-list {
+    position: absolute;
+    left: 520px;
+    top: 20px;
+    z-index: 1001;
+    height: 504px;
+    overflow: auto;
+    div {
+      width: 50px;
+      height: 50px;
+      border: 1px solid red;
+      img {
+        width: 50px;
+        height: 50px;
       }
     }
   }

@@ -36,7 +36,7 @@ class Main {
     this.ctx.fillStyle = this.fillColor
     this.ctx.arc(x, y, this.radius, 0, Math.PI * 2);
     this.ctx.fill();
-    }
+  }
 
   drawLine(x1: number, y1: number, x2: number, y2: number) {
     this.ctx.beginPath();
