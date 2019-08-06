@@ -1,52 +1,57 @@
 <template>
   <div class="container">
-    <!--<Layer></Layer>-->
     <div class="canvas-bar"
          ref="canvasBar"
          @mousedown="handleMousedown"
          @mousemove="handleMousemove"
          @mouseup="handleMouseup"
     >
+      <Layer v-for="(layer) in layerDataList"
+             :zIndex="layer.zIndex"
+             ref="layerList"
+             :id="layer.id"
+             :key="layer.id"></Layer>
+
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
     </div>
     <button @click="clearCanvas">清楚</button>
     <button @click="createCanvas">添加画布</button>
-    <LayerManagement :layerList="layerList"
-                     :previewImgList="previewImgList"
-    ></LayerManagement>
+    <LayerManagement :previewImgList="previewImgList" :currentLayer="currentLayer"></LayerManagement>
   </div>
 </template>
 
 <script lang="ts">
-  import {Vue, Component, Provide, ProvideReactive} from 'vue-property-decorator'
+  import {Vue, Component, Provide, Prop} from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
   import LayerManagement from './LayerManagement.vue'
-
-  // @ts-ignore
-  const LayerClass = Vue.extend(Layer) as Layer
+  import { After } from '../util/decorators'
+  import { previewImgType, layerDataType } from '../types/layer-management'
 
   @Component({components: {Layer, LayerManagement}})
   export default class DrawingBoard extends Vue {
     $refs!: {
-      canvasBar: HTMLBaseElement
+      canvasBar: HTMLBaseElement,
+      layerList: Layer[],
     };
 
     // 画笔、工具设置
     paintbrush: Paintbrush = new Paintbrush()
 
-    painting: boolean = false; // 鼠标是否按下1
+    painting: boolean = false; // 鼠标是否按下
     lastPoint!: { x: number, y: number }; // 最后编辑的鼠标位置
 
     canvasWidth: number = 500
     canvasHeight: number = 500
 
-    currentCanvasLayer!: Layer; // 当前编辑的图层, 一个vue组件
-    layerList: Layer[] = []; // 全部的图层集合
-    canvasElementList: HTMLCanvasElement[] = [];// 全部图层的dom元素的集合
+    currentLayer: Layer | null = null; // 当前编辑的图层, 一个vue组件
+
+    layerInstanceList: Layer[] = []; // 全部图层实例的集合， 可以调用方法， 不可修改数据
+    layerDataList: layerDataType[] = [] // 全部图层数据的集合， 通过props修改数据
 
     zIndex = 0 // 自增z-index
+
 
     @Provide()
     painSetting: Paintbrush = this.paintbrush;
@@ -54,9 +59,9 @@
     @Provide()
     main = this;
 
-    // 所有的预览图片
+    // 获取所有的预览图片
     get previewImgList() {
-      return this.layerList
+      return this.layerInstanceList
         .map(_ => {
           return {
             id: _.id,
@@ -76,7 +81,7 @@
       let x = e.offsetX;
       let y = e.offsetY;
       this.lastPoint = {x: x, y: y};
-      this.currentCanvasLayer.drawCircle(x, y, 0);
+      this.currentLayer!.drawCircle(x, y, 0);
     }
 
     handleMousemove(e: MouseEvent) {
@@ -89,14 +94,14 @@
         return
       }
       let newPoint = {x: x, y: y};
-      this.currentCanvasLayer.drawLine(this.lastPoint.x,
+      this.currentLayer!.drawLine(this.lastPoint.x,
         this.lastPoint.y, newPoint.x, newPoint.y);
       this.lastPoint = newPoint;
     }
 
     handleMouseup() {
       this.painting = false
-      this.currentCanvasLayer.createdImg()
+      this.currentLayer!.createdImg()
     }
 
     // 改变画笔大小
@@ -116,45 +121,41 @@
 
     // 清楚画布
     clearCanvas() {
-      this.currentCanvasLayer.clearCanvas()
+      this.currentLayer!.clearCanvas()
     }
 
     // 创建新的画布
     createCanvas() {
       // 创建一个新的vue画布实例1
-      // @ts-ignore
-      const layer = new LayerClass({
-        parent: this,
-        data: {
-          zIndex: this.zIndex++,
-          id: this.zIndex - 1
-        },
+      const id = Number(new Date())
+      this.layerDataList.push({
+        zIndex: this.zIndex++,
+        id:id
       })
-      layer.$mount()
-      layer.$el.dataset.id = '' + layer.id
-      this.$refs.canvasBar.appendChild(layer.$el) // 挂载
-      this.canvasElementList.unshift(layer.$el)
-      this.layerList.push(layer)
-      this.currentCanvasLayer = layer
+
+      this.$nextTick(() => {
+        const layer = this.$refs.layerList.find(_ => id === _.id)!
+        this.layerInstanceList.push(layer)
+        this.currentLayer = layer
+      })
     }
 
     // 选中图层
     selectCurrentLayer(id: number) {
-      this.currentCanvasLayer = this.layerList.find(_ => _.id === id)!
+      this.currentLayer = this.layerInstanceList.find(_ => _.id === id)!
     }
 
     // 删除画布
     deleteLayer(id: number) {
-      const layerIndex = this.layerList.findIndex(layer => layer.id === id)
-      this.layerList.splice(layerIndex, 1)
-      const elementIndex = this.canvasElementList.findIndex(el => +el.dataset.id! === id)
-      const element = this.canvasElementList.splice(elementIndex, 1)
-      this.$refs.canvasBar.removeChild(element[0])
+      const layerInstanceIndex = this.layerInstanceList.findIndex(layer => layer.id === id)
+      this.layerInstanceList.splice(layerInstanceIndex, 1)
+      const layerDataIndex = this.layerDataList.findIndex(layer => layer.id === id)
+      this.layerDataList.splice(layerDataIndex, 1)
     }
 
     // 图层置底
     sendLayerToBack(id: number) {
-      this.layerList.forEach(item => {
+      this.layerDataList.forEach(item => {
         if (item.id === id) {
           item.zIndex = 0
           return
@@ -170,9 +171,9 @@
 
     // 图层置顶
     bringLayerToFront(id: number) {
-      this.main.layerList.forEach(item => {
+      this.layerDataList.forEach(item => {
         if (item.id === id) {
-          item.zIndex = this.main.layerList.length
+          item.zIndex = this.layerDataList.length
           return
         }
         if (this.zIndex > item.zIndex) {

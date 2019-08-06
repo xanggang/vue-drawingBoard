@@ -1,7 +1,8 @@
 <template>
   <canvas class="canvas"
-          :width="main.canvasWidth"
-          :height="main.canvasHeight"
+          :width="width + 'px'"
+          :height="height + 'px'"
+          :data-id="id"
           :style="styleSetting"
   ></canvas>
 </template>
@@ -15,11 +16,12 @@
 
   @Component({})
   export default class LayerClass extends Vue {
+    readonly componentName:string =  'LayerClass'
+
     $el!: HTMLCanvasElement;
     ctx!: CanvasRenderingContext2D; //默认为绘图环境
     canvas !: HTMLCanvasElement; //默认画布
 
-    readonly id: number = 0; // id
     previewUrl: string = ''
 
     @Inject()
@@ -28,18 +30,15 @@
     @Inject()
     main!: MainClass;
 
-    // @Prop(Number) zIndex!: number;
-
-    zIndex: number = 0
+    @Prop() id!: number
+    @Prop() zIndex!: number
+    @Prop({default: 500}) width!: number
+    @Prop({default: 500}) height!: number
 
     get styleSetting() {
       return {
         'z-index': this.zIndex
       }
-    }
-
-    created() {
-      // this.id = new Date().valueOf()
     }
 
     mounted() {
@@ -85,9 +84,3 @@
     }
   }
 </script>
-
-<style>
-  .container {
-
-  }
-</style>
