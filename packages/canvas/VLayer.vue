@@ -12,11 +12,10 @@
 <script lang="ts">
   import {Component, Prop, Vue, Inject} from 'vue-property-decorator';
   import MainClass from './index.vue'
-  import Paintbrush from './paintbrush'
+  import Paintbrush from '../tools/paintbrush'
 
   @Component({})
-  export default class LayerClass extends Vue {
-    readonly componentName:string =  'LayerClass'
+  export default class VLayer extends Vue {
 
     $el!: HTMLCanvasElement;
     ctx!: CanvasRenderingContext2D; //默认为绘图环境
@@ -29,6 +28,7 @@
 
     @Inject()
     main!: MainClass;
+
 
     @Prop() id!: number
     @Prop() zIndex!: number

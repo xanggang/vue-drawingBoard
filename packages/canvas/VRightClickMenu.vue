@@ -9,32 +9,35 @@
 <script lang="ts">
   import {Component, Prop, Vue, Inject} from 'vue-property-decorator';
   import MainClass from './index.vue'
+  import { LayerTool as LayerToolType} from '../tools/layer'
 
   @Component({})
-  export default class RightClickMenu extends Vue {
+  export default class VRightClickMenu extends Vue {
     readonly id: number = NaN;
     readonly zIndex: number = NaN;
+
+    @Inject({ default: {}})
+    layerTool!: LayerToolType;
 
     @Inject()
     main!: MainClass;
 
     bringLayerToFront() {
-      this.main.bringLayerToFront(this.id)
-
+      this.layerTool.bringLayerToFront(this.id, this.zIndex)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })
     }
 
     sendLayerToBack() {
-      this.main.sendLayerToBack(this.id)
+      this.layerTool.sendLayerToBack(this.id, this.zIndex)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })
     }
 
     deleteLayer() {
-      this.main.deleteLayer(this.id)
+      this.layerTool.deleteLayer(this.id)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })
