@@ -47,32 +47,6 @@
       this.createdImg()
     }
 
-    /**
-     * 画点的方法
-     * @param x
-     * @param y
-     * @param radius
-     */
-    drawCircle(x: number, y: number, radius: number = this.painSetting.radius) {
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.fillStyle = this.painSetting.fillColor;
-      this.ctx.arc(x, y, this.painSetting.radius, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-
-    drawLine(x1: number, y1: number, x2: number, y2: number) {
-      this.ctx.beginPath();
-      this.ctx.lineWidth = this.painSetting.lineWidth;
-      this.ctx.lineCap = "round";
-      this.ctx.lineJoin = "round";
-      this.ctx.strokeStyle = this.painSetting.strokeColor;
-      this.ctx.moveTo(x1, y1);
-      this.ctx.lineTo(x2, y2);
-      this.ctx.stroke();
-      this.ctx.closePath();
-    }
-
     clearCanvas() {
       this.ctx.clearRect(0,0,this.main.canvasWidth, this.main.canvasHeight);
     }
