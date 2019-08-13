@@ -1,4 +1,5 @@
 import Vue from 'vue'
+import BaseShape from '../tools/BaseShape'
 
 export type previewImgType = {
   id: number,
@@ -8,7 +9,8 @@ export type previewImgType = {
 
 export type layerDataType = {
   id: number,
-  zIndex: number
+  zIndex: number,
+  shapeList: BaseShape[]
 }
 
 

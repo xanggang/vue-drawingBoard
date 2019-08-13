@@ -1,4 +1,4 @@
-import { VLayerType } from '../types/layer-management'
+import { VLayerType } from '../types/layer'
 import { LayerTool as LayerToolType} from './layer'
 
 /**
@@ -85,5 +85,9 @@ export default class PaintbrushClass {
 
   handleMouseup() {
     this.layerTool.currentVLayer.createdImg()
+  }
+
+  render() {
+
   }
 }
