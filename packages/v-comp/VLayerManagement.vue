@@ -2,11 +2,11 @@
   <div class="container" ref="container">
     <transition-group name="flip-list" tag="div">
       <div class="img-bar"
-           v-for="(layer, index) in previewImgList"
+           v-for="(layer, index) in layerManagement.previewImgList"
            :key="layer.id"
            :data-id="layer.id"
            :data-zindex="layer.zIndex"
-           :class="[{'select': layerTool.currentVLayer && layerTool.currentVLayer.id === layer.id}]"
+           :class="[{'select': layerManagement.currentLayer && layerManagement.currentLayer.id === layer.id}]"
            draggable="true"
            @dragstart.stop="ondragstart($event, index)"
            @dragend.stop="ondragend"
@@ -28,12 +28,10 @@
 <script lang="ts">
   import {Component, Prop, Vue, Inject} from 'vue-property-decorator';
   import LayerClass from './VLayer.vue'
-  import { removeClass, addClass, once, on, off } from '../util/dom'
-  import MainClass from './index.vue'
+  import { removeClass, addClass, once, on, off } from '../utils/dom'
   import RightClickMenu from './VRightClickMenu.vue'
-  const Popper = require('../util/popper.js')
-  import layerTool, { LayerTool as LayerToolType} from '../tools/layer'
-
+  import { LayerManagementClass } from '../layer/layerManagementClass'
+  const Popper = require('../utils/popper.js')
   // @ts-ignore
   const PopperClass = Vue.extend(RightClickMenu) as RightClickMenu
 
@@ -44,18 +42,9 @@
 
   @Component({components: { RightClickMenu }})
   export default class VLayerManagement extends Vue {
-    $parent!: MainClass
-    $refs!:{
-      container: HTMLElement
-    }
 
-    @Prop() currentLayer!: LayerClass | null
-
-    @Inject({ default: {}})
-    main!: MainClass;
-
-    @Inject({ default: {}})
-    layerTool!: LayerToolType;
+    @Prop()
+    layerManagement!: LayerManagementClass
 
     // 当前拖动的元素
     currentImgElement: HTMLElement | null = null
@@ -64,22 +53,10 @@
     popperJS: any = null
     rightClickMenu: RightClickMenu | null = null
 
-    // 获取所有的预览图片
-    get previewImgList(): previewImg[] {
-      return this.layerTool.VLayerInstanceList
-        .map(_ => {
-          return {
-            id: _.id,
-            previewUrl: _.previewUrl,
-            zIndex: _.zIndex
-          }
-        })
-        .sort((a, b) => b.zIndex - a.zIndex)
-    }
 
     // 选择当前图层
     selectCurrentLayer(id: number) {
-      this.layerTool.selectCurrentLayer(id)
+      this.layerManagement.selectCurrentLayer(id)
     }
 
 
@@ -94,11 +71,9 @@
       addClass($evente.currentTarget, 'active')
       const currentId = this.currentImgElement!.dataset.id!;
       const currentZindex = this.currentImgElement!.dataset.zindex!;
-
       const resId = $evente.currentTarget.dataset.id!;
       const resZindex= $evente.currentTarget.dataset.zindex!;
-      this.layerTool.layerDataList.find(_ => _.id === +currentId)!.zIndex = +resZindex;
-      this.layerTool.layerDataList.find(_ => _.id === + resId)!.zIndex = +currentZindex;
+      this.layerManagement.layerSorting(currentId, currentZindex, resId, resZindex)
     }
 
     dragleave($evente: any) {

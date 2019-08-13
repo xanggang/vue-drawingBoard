@@ -9,7 +9,7 @@
 <script lang="ts">
   import {Component, Prop, Vue, Inject} from 'vue-property-decorator';
   import MainClass from './index.vue'
-  import { LayerTool as LayerToolType} from '../tools/layer'
+  import { LayerTool as LayerToolType} from '../layer/layer'
 
   @Component({})
   export default class VRightClickMenu extends Vue {
