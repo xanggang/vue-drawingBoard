@@ -1,5 +1,4 @@
-import Vue from 'vue'
-import { layerDataType, VLayerType } from '../types/layer-management'
+import { layerDataType, VLayerType } from '../types/layer'
 
 /**
  * 图层工具， 所有图层的管理中心
@@ -10,6 +9,11 @@ export class LayerTool {
    * 当前编辑的图层实例
    */
   currentVLayer: VLayerType = {} as VLayerType
+
+  /**
+   * 当前实例的props
+   */
+  currentData!: layerDataType
 
   /**
    * 全部图层的vue实例， 不允许修改内部属性
@@ -32,10 +36,13 @@ export class LayerTool {
    */
   public createCanvas(): number {
     const id = Number(new Date())
-    this.layerDataList.push({
+    const layerData = {
       zIndex: this.zIndex++,
-      id:id
-    })
+      id:id,
+      shapeList: []
+    }
+    this.layerDataList.push(layerData)
+    this.currentData = layerData
     return id
   }
 
@@ -54,7 +61,7 @@ export class LayerTool {
    */
   public selectCurrentLayer(id: number) {
     this.currentVLayer = this.VLayerInstanceList.find(_ => _.id === id)!
-    console.log(this.currentVLayer.id);
+    this.currentData = this.layerDataList.find(_ => _.id === id)!
   }
 
   /**

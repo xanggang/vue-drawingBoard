@@ -29,6 +29,7 @@
   import VLayerManagement from './VLayerManagement.vue'
   import { layerDataType, VLayerType } from '../types/layer-management'
   import layerTool from '../tools/layer'
+  import ShapeTool from '../tools/shape'
 
   @Component({components: {VLayer, VLayerManagement}})
   export default class DrawingBoard extends Vue {
@@ -53,6 +54,8 @@
     @Provide()
     painSetting: Paintbrush = new Paintbrush(this.layerTool)
 
+    shapeTool = new ShapeTool(this.layerTool, this.painSetting)
+
 
     mounted() {
       this.createCanvas()
@@ -64,17 +67,17 @@
 
     handleMousedown($event: MouseEvent) {
       this.painting = true
-      this.painSetting.handleMousedown($event)
+      this.shapeTool.handleMousedown($event)
     }
 
     handleMousemove($event: MouseEvent) {
       if (!this.painting) return
-      this.painSetting.handleMousemove($event)
+      this.shapeTool.handleMousemove($event)
     }
 
-    handleMouseup() {
+    handleMouseup($event: MouseEvent) {
       this.painting = false
-      this.painSetting.handleMouseup()
+      this.shapeTool.handleMouseup($event)
     }
 
     // 改变画笔大小
