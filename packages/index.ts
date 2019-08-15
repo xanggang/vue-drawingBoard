@@ -1,5 +1,5 @@
 import { Vue } from 'vue-property-decorator'
-import Index from './canvas/index.vue'
+import Index from './v-comp/index.vue'
 
 const components = [
   Index

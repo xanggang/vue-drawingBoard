@@ -117,7 +117,7 @@ export const getStyle = function(element: HTMLBaseElement, styleName: string) {
 }
 
 // @ts-nocheck
-export function setStyle(element: HTMLBaseElement, styleName: string, value: string) {
+export function setStyle(element: any, styleName: string, value: string | number) {
   if (!element || !styleName) return;
 
   if (typeof styleName === 'object') {

@@ -13,6 +13,7 @@ module.exports = {
       .rule('js')
       .include
       .add('/packages')
+      .add('/packages1')
       .add('/example')
       .end()
       .use('babel')
