@@ -8,36 +8,33 @@
 
 <script lang="ts">
   import {Component, Prop, Vue, Inject} from 'vue-property-decorator';
-  import MainClass from './index.vue'
-  import { LayerTool as LayerToolType} from '../layer/layer'
+  import { LayerManagementClass } from '../layer/layerManagementClass'
 
   @Component({})
   export default class VRightClickMenu extends Vue {
     readonly id: number = NaN;
     readonly zIndex: number = NaN;
 
-    @Inject({ default: {}})
-    layerTool!: LayerToolType;
 
-    @Inject()
-    main!: MainClass;
+    @Prop()
+    layerManagement!: LayerManagementClass
 
     bringLayerToFront() {
-      this.layerTool.bringLayerToFront(this.id, this.zIndex)
+      this.$parent.layerManagement.bringLayerToFront(this.id, this.zIndex)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })
     }
 
     sendLayerToBack() {
-      this.layerTool.sendLayerToBack(this.id, this.zIndex)
+      this.$parent.layerManagement.sendLayerToBack(this.id, this.zIndex)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })
     }
 
     deleteLayer() {
-      this.layerTool.deleteLayer(this.id)
+      this.$parent.layerManagement.deleteLayer(this.id)
       this.$nextTick(() => {
         this.$emit('hideRightMenu')
       })

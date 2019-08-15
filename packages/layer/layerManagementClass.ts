@@ -97,6 +97,7 @@ export class LayerManagementClass {
         return
       }
     })
+    this.getPreviewImgList()
   }
 
   /**
@@ -116,6 +117,7 @@ export class LayerManagementClass {
         item.zIndex--
       }
     })
+    this.getPreviewImgList()
   }
 
   /**

@@ -7,6 +7,7 @@
          @mousemove="handleMousemove"
          @mouseup="handleMouseup"
     >
+      <canvas class="canvas" id="paintbrush" width="500" height="500" style="display: none"></canvas>
       <input class="rang" @input.stop="handleRangInput" type="range" name="points" min="1" max="10" value="1" />
       <input class="palette" type="color" id="color" @input="handlePalette">
     </div>

@@ -69,8 +69,6 @@ export default class LayerClass {
   private initStyle() {
     this.canvas.width = this.width
     this.canvas.height = this.height
-    // setStyle(this.canvas, 'width', this.width + 'px')
-    // setStyle(this.canvas, 'height', this.height + 'px')
     setStyle(this.canvas, 'zIndex', this._zIndex)
   }
 
@@ -101,7 +99,10 @@ export default class LayerClass {
   }
 
   render() {
-    this.ctx.clearRect(0, 0, 500, 500)
+    // 如果是画笔工具， 则不用清空画布
+    if (shapeManagement.currentShape.shapeName !== 'PaintbrushClass') {
+      this.ctx.clearRect(0, 0, 500, 500)
+    }
     this.shapesList.forEach(shape => {
       if (shape === this.currentShape) return
       shape.render()

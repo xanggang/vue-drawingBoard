@@ -14,3 +14,10 @@ export type ShapeConstructor =  {
   },
 }
 
+
+export type StyleConstructor = {
+  radius: number ;
+  lineWidth: number;
+  fillColor: string;
+  strokeColor: string;
+}
