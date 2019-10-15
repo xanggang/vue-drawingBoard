@@ -11,3 +11,4 @@ docker build -t myvue .
 docker images;
 # 基于shop/admin 镜像 构建一个容器 shop_admin
 docker run -p 9527:80 -d --name myvue myvue
+docker rmi -f  `docker images | grep '<none>' | awk '{print $3}'`
