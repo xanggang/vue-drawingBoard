@@ -19,6 +19,65 @@
 </template>
 
 <script lang="ts">
+  import 'reflect-metadata';
+
+  let methodMap = new Map()
+  let pathMap = new Map()
+
+  const METHOD_METADATA = 'method';
+  const PATH_METADATA = 'path';
+
+
+  const Controller = (path: string): ClassDecorator => {
+    return target => {
+      Reflect.defineMetadata(PATH_METADATA, path, target);
+    }
+  }
+
+  const createMappingDecorator = (method: string) => (path: string): MethodDecorator => {
+    return (target, key, descriptor) => {
+      Reflect.defineMetadata(PATH_METADATA, path, descriptor.value);
+      Reflect.defineMetadata(METHOD_METADATA, method, descriptor.value);
+      // 关于为什么参数是target,key,descriptor，可以看我之前写的一篇文章[装饰器(Decorator)在React中的应用](https://www.geekjc.com/post/5a630df9f6a6db2832a57368)
+    }
+  }
+
+  const Get = createMappingDecorator('GET');
+  const Post = createMappingDecorator('POST');
+
+  @Controller('api')
+  class A{
+
+    mydata = 1
+
+    @Get('/run')
+    run() {
+      console.log('run',this.mydata);
+    }
+
+    // @Get('/index')
+    // index() {
+    //   console.log('index', this.mydata);
+    // }
+  }
+
+  const prototype = Object.getPrototypeOf(new A);
+  const mathods = Object.getOwnPropertyNames(prototype)
+    .filter(name => name !== 'constructor')
+  mathods.map(obj => {
+    let a = Reflect.getMetadata(METHOD_METADATA, prototype[obj])
+    const instance = new prototype.constructor();
+    instance[obj]()
+  })
+
+  // console.log(methodMap.get('class') === methodMap.get('run').constructor);
+
+
+
+
+
+
+
   import {Vue, Component, Provide, ProvideReactive} from 'vue-property-decorator'
   import Layer from './Layer.vue'
   import Paintbrush from './paintbrush'
